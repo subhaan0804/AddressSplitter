@@ -121,6 +121,7 @@ def address_calculation(result_dict, address_types=[]):
     def split_address(address):
         lines = address.strip().split("\n")
         Name = Street = PostCode = City = Country = None
+        debug_format = -1  # Initialize debug flag with -1 (no match)
 
         if len(lines) == 3:
             Name = lines[0].strip()
@@ -134,29 +135,34 @@ def address_calculation(result_dict, address_types=[]):
                 PostCode = match.group(2)
                 City = match.group(3).title()
                 Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 0
 
             # 2. US ZIP+4 at end: New York, NY 10118-3299
             elif match := re.match(r"^(.+?,\s+\w{2})\s+(\d{3,7}-\d{3,7})$", postcode_city_line):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "USA"
+                debug_format = 1
 
             # 3. US ZIP (no dash): Washington, DC 20433
             elif match := re.match(r"^(.+?,\s+\w{2})\s+(\d{3,7})$", postcode_city_line):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "USA"
+                debug_format = 2
 
             # 4. UK postcode at end: London WC1X 0DW
             elif match := re.match(r"^(.+)\s+([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$", postcode_city_line):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "UNITED KINGDOM"
+                debug_format = 3
 
             # 5. EU-style postcode at end: Kempten Bayern 87435
             elif match := re.match(r"^(.+?)\s+(\d{3,7})$", postcode_city_line):
                 City = match.group(1).title()
                 PostCode = match.group(2)
+                debug_format = 4
 
             # 6. CZ 16900 Praha 6
             elif match := re.match(r"^(.+?)\s+(\d{3,7})$", postcode_city_line):
@@ -164,6 +170,7 @@ def address_calculation(result_dict, address_types=[]):
                 PostCode = match.group(2)
                 City = match.group(3)
                 Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 5
 
             # 6. City then prefixed postcode at end: DOMBLANS F-39210
             elif match := re.match(r"^(.+)\s+([A-Z]{1,3}-\d{3,7})$", postcode_city_line):
@@ -171,8 +178,10 @@ def address_calculation(result_dict, address_types=[]):
                 PostCode = match.group(2).split("-")[1]
                 prefix = match.group(2).split("-")[0] + "-"
                 Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 6
             else:
                 City = postcode_city_line
+                debug_format = 7
             
         # elif is_valid_uk_postal_code(lines[-2]) and (len(lines) >= 6):
         #     Country = lines[-1].strip()
@@ -217,6 +226,7 @@ def address_calculation(result_dict, address_types=[]):
                 PostCode = match.group(2)
                 City = match.group(3).title()
                 Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 8
                 
             # 2. US ZIP+4 at end: New York, NY 10118-3299
             elif match := re.match(r"^(.+?,\s+\w{2})\s+(\d{3,7}-\d{3,7})$", postcode_city_line):
@@ -226,6 +236,7 @@ def address_calculation(result_dict, address_types=[]):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "USA"
+                debug_format = 9
                 
             # 3. US ZIP (no dash): Washington, DC 20433
             elif match := re.match(r"^(.+?,\s+\w{2})\s+(\d{3,7})$", postcode_city_line): 
@@ -235,6 +246,7 @@ def address_calculation(result_dict, address_types=[]):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "USA"
+                debug_format = 10
                 
             # 4. UK postcode at end: London WC1X 0DW
             elif match := re.match(r"^(.+)\s+([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$", postcode_city_line):
@@ -244,6 +256,7 @@ def address_calculation(result_dict, address_types=[]):
                 City = match.group(1)
                 PostCode = match.group(2)
                 Country = "UNITED KINGDOM"
+                debug_format = 11
                 
             # 5. EU-style postcode at end: Kempten Bayern 87435 or Larnaca 6012
             elif match := re.match(r"^(.+?)\s+(\d{3,7})$", postcode_city_line):
@@ -252,6 +265,7 @@ def address_calculation(result_dict, address_types=[]):
                 
                 City = match.group(1).title()
                 PostCode = match.group(2)
+                debug_format = 12
                 
             # 6. City then prefixed postcode at end: DOMBLANS F-39210
             elif match := re.match(r"^(.+)\s+([A-Z]{1,3}-\d{3,7})$", postcode_city_line):
@@ -262,6 +276,7 @@ def address_calculation(result_dict, address_types=[]):
                 PostCode = match.group(2).split("-")[1]
                 prefix = match.group(2).split("-")[0] + "-"
                 Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 13
 
             # 7. BC V5M 0C4 Vancouver
             elif match := re.match(r"^([A-Z]{2})\s+([A-Z]\d[A-Z]\s+\d[A-Z]\d)\s+(.+)$", postcode_city_line):
@@ -271,12 +286,13 @@ def address_calculation(result_dict, address_types=[]):
                 Country = match.group(1)  # "BC"
                 PostCode = match.group(2)  # "V5M 0C4"
                 City = match.group(3)  # "Vancouver"
-
+                debug_format = 14
 
             # 8. 7051DW Varsseveld
             elif match := re.match(r"^(\d{3,5}[A-Z]{1,3})\s+(.+)$", postcode_city_line):
                 City = match.group(2)
                 PostCode = match.group(1)
+                debug_format = 15
 
             # 09. East Granby, US-06026 CT
             elif match := re.match(r"^(.+?),\s+(?:([A-Z]{1,3})-)?(\d{3,7}\s+[A-Z]{1,3})$", postcode_city_line):
@@ -284,16 +300,19 @@ def address_calculation(result_dict, address_types=[]):
                 prefix = match.group(2) if match.group(2) and len(match.group(2)) > 1 else None # "US"
                 PostCode = match.group(3)  
                 Country = prefix_country_map.get(prefix.upper(), Country) 
+                debug_format = 16
             
             # 10. 546 42 THESSALONIKI (greece)
             elif match := re.match(r"^(\d{3}\s+\d{2})\s+(.+)$", postcode_city_line):
                 City = match.group(2)
                 PostCode = match.group(1)
+                debug_format = 17
 
             # 11. 1011 DJ AMSTERDAM (Netherlands)
             elif match := re.match(r"^(\d{4}\s+[A-Z]{2})\s+(.+)$", postcode_city_line):
                 City = match.group(2)
                 PostCode = match.group(1)
+                debug_format = 18
 
             # 12. Simple: 1040 Brussels
             elif match := re.match(r"^(\d{3,7})\s+(.+)$", postcode_city_line):
@@ -302,7 +321,8 @@ def address_calculation(result_dict, address_types=[]):
                 
                 City = match.group(1).title()
                 PostCode = match.group(2)
-                # PostCode = match.group(2).split("-")[1] # creating errors   
+                # PostCode = match.group(2).split("-")[1] # creating errors
+                debug_format = 19   
 
             # 13. PL 58-500 Jelenia Gora (Poland)
             elif match := re.match(r'^([A-Z]{2})\s+(\d{2}-\d{3})\s+(.+)$', postcode_city_line): 
@@ -313,6 +333,7 @@ def address_calculation(result_dict, address_types=[]):
 
                 Street = lines[-2].strip() 
                 Name = "\n".join(lines[:-2]).strip()
+                debug_format = 20
 
             # 14. BRA 370 Campanario-Diadema (Brazil)
             #     MEX 25300 Saltillo, Coahuilla C.P. (Mexico) 
@@ -324,6 +345,7 @@ def address_calculation(result_dict, address_types=[]):
 
                 Street = lines[-2].strip() 
                 Name = "\n".join(lines[:-2]).strip() 
+                debug_format = 21
 
             # address having country in the last line
             elif len(lines) >= 3:
@@ -342,36 +364,43 @@ def address_calculation(result_dict, address_types=[]):
                     PostCode = prefix + match.group(2)         
                     City = match.group(3)   
                     Country = prefix_country_map.get(prefix.upper(), Country) 
+                    debug_format = 22
                 
                 # 1. EU-style: B-1049 Brussels or A-1211 Geneva
                 elif match := re.match(r"^([A-Z]{1,3}-)(\d+)\s+(.+)$", postcode_city_line):
                     PostCode = match.group(1) + match.group(2)
                     City = match.group(3)
+                    debug_format = 23
 
                 # 2. UK-style: London WC1X 0DW
                 elif match := re.match(r"^(.+)\s+([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$", postcode_city_line):
                     City = match.group(1)
                     PostCode = match.group(2)
+                    debug_format = 24
 
                 # 3. US ZIP+4 style: New York, NY 10118-3299
                 elif match := re.match(r"^(.+),?\s+\w{2}\s+(\d{3,7}-\d{3,7})$", postcode_city_line):
                     City = match.group(1)
                     PostCode = match.group(2)
+                    debug_format = 25
 
                 # 4. US ZIP format: Washington, DC 20433
                 elif match := re.match(r"^(.+?,\s+\w{2})\s+(\d{3,7}(?:-\d{3,7})?)$", postcode_city_line):
                     City = match.group(1)
                     PostCode = match.group(2)
+                    debug_format = 26
 
                 # 5. US-style without comma: Greensboro NC 27407
                 elif match := re.match(r"^(.+?)\s+([A-Z]{2})\s+(\d{3,7})$", postcode_city_line):
                     City = match.group(1) + " " + match.group(2)
                     PostCode = match.group(3)
+                    debug_format = 27
 
                 # 6. EU: e.g., Kempten Bayern 87435
                 elif match := re.match(r"^(.+?)\s+(\d{3,7})$", postcode_city_line):
                     City = match.group(1)
                     PostCode = match.group(2)
+                    debug_format = 28
 
                 # 7. UK-stye: GB-DE12 7DS Measham
                 elif match := re.match(r"^([A-Z]{1,3}-)([A-Z]{1,2}\d{1,2}\s*\d[A-Z]{2})\s+(.+)$", postcode_city_line):
@@ -379,6 +408,7 @@ def address_calculation(result_dict, address_types=[]):
                     PostCode = prefix + match.group(2)  
                     City = match.group(3)
                     Country = prefix_country_map.get(prefix.upper(), Country) 
+                    debug_format = 29
 
                 # 8. BC V5M 0C4 Vancouver
                 elif match := re.match(r"^([A-Z]{2})\s+([A-Z]\d[A-Z]\s+\d[A-Z]\d)\s+(.+)$", postcode_city_line):
@@ -388,21 +418,25 @@ def address_calculation(result_dict, address_types=[]):
                     Country = match.group(1)  
                     PostCode = match.group(2) 
                     City = match.group(3)     
+                    debug_format = 30
 
                 #  9. 7051DW Varsseveld
                 elif match := re.match(r"^(\d{3,5}[A-Z]{1,3})\s+(.+)$", postcode_city_line):
                     City = match.group(2)
                     PostCode = match.group(1)
+                    debug_format = 31
 
                 # 10. 546 42 THESSALONIKI (greece)
                 elif match := re.match(r"^(\d{3}\s+\d{2})\s+(.+)$", postcode_city_line):
                     City = match.group(2)
                     PostCode = match.group(1)
+                    debug_format = 32
 
                 # 11. 1011 DJ AMSTERDAM (Netherlands)
                 elif match := re.match(r"^(\d{4}\s+[A-Z]{2})\s+(.+)$", postcode_city_line):
                     City = match.group(2)
                     PostCode = match.group(1)
+                    debug_format = 33
 
                 # 12. East Granby, US-06026 CT
                 elif match := re.match(r"^(.+?),\s+(?:([A-Z]{1,3})-)?(\d{3,7}\s+[A-Z]{1,3})$", postcode_city_line):
@@ -410,6 +444,7 @@ def address_calculation(result_dict, address_types=[]):
                     prefix = match.group(2) if match.group(2) and len(match.group(2)) > 1 else None # "US"
                     PostCode = match.group(3)  
                     Country = prefix_country_map.get(prefix.upper(), Country) 
+                    debug_format = 34
 
                 # ------------------------------
                 # MATCHING UK POSTCODE FORMATS
@@ -422,6 +457,7 @@ def address_calculation(result_dict, address_types=[]):
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
                     Country = lines[-1].strip()
+                    debug_format = 35
 
                 # 14. ANN NAA (e.g., M60 1NW)
                 elif match := re.match(r'^[A-Z]{1}[0-9]{2}\s?[0-9]{1}[A-Z]{2}$', postcode_city_line):
@@ -430,6 +466,7 @@ def address_calculation(result_dict, address_types=[]):
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
                     Country = lines[-1].strip()
+                    debug_format = 36
 
                 # 15. AAN NAA (e.g., CR2 6XH)
                 elif match := re.match(r'^[A-Z]{2}[0-9]{1}\s?[0-9]{1}[A-Z]{2}$', postcode_city_line):
@@ -438,6 +475,7 @@ def address_calculation(result_dict, address_types=[]):
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
                     Country = lines[-1].strip()
+                    debug_format = 37
 
                 # 16. AANN NAA (e.g., DN55 1PT)
                 elif match := re.match(r'^[A-Z]{2}[0-9]{2}\s?[0-9]{1}[A-Z]{2}$', postcode_city_line):
@@ -445,7 +483,8 @@ def address_calculation(result_dict, address_types=[]):
                     Street = lines[-4].strip()
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
-                    Country = lines[-1].strip()   
+                    Country = lines[-1].strip()
+                    debug_format = 38
 
                 # 17. ANA NAA (e.g., W1A 1HQ)
                 elif match := re.match(r'^[A-Z]{1}[0-9]{1}[A-Z]{1}\s?[0-9]{1}[A-Z]{2}$', postcode_city_line):
@@ -453,7 +492,8 @@ def address_calculation(result_dict, address_types=[]):
                     Street = lines[-4].strip()
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
-                    Country = lines[-1].strip()   
+                    Country = lines[-1].strip()
+                    debug_format = 39
 
                 # 18. AANA NAA (e.g., EC1A 1BB)
                 elif match := re.match(r'^[A-Z]{2}[0-9]{1}[A-Z]{1}\s?[0-9]{1}[A-Z]{2}$', postcode_city_line):
@@ -461,7 +501,8 @@ def address_calculation(result_dict, address_types=[]):
                     Street = lines[-4].strip()
                     City = lines[-3].strip()
                     PostCode = lines[-2].strip()
-                    Country = lines[-1].strip()                                          
+                    Country = lines[-1].strip()
+                    debug_format = 40
 
                 # --------------------------------------------------------
 
@@ -474,6 +515,7 @@ def address_calculation(result_dict, address_types=[]):
 
                     Street = lines[-2].strip() 
                     Name = "\n".join(lines[:-2]).strip() 
+                    debug_format = 41
 
                 # 20. BRA 370 Campanario-Diadema (Brazil)
                 #     MEX 25300 Saltillo, Coahuilla C.P. (Mexico) 
@@ -484,14 +526,17 @@ def address_calculation(result_dict, address_types=[]):
                     Country = prefix_country_map.get(prefix.upper(), Country)
 
                     Street = lines[-2].strip() 
-                    Name = "\n".join(lines[:-2]).strip()    
+                    Name = "\n".join(lines[:-2]).strip()
+                    debug_format = 42
 
                 # Simple: 1040 Brussels
                 elif match := re.match(r"^(\d{3,7})\s+(.+)$", postcode_city_line):
                     PostCode = match.group(1)
-                    City = match.group(2)    
+                    City = match.group(2)
+                    debug_format = 43
                 else:
                     City = postcode_city_line
+                    debug_format = 44
         
         if Country:
             code = find_country_code(Country, country_id_mapping_dict)
@@ -504,7 +549,7 @@ def address_calculation(result_dict, address_types=[]):
             if "-" in PostCode:
                 PostCode = PostCode.split("-")[1]
 
-        return [Name, Street, PostCode, City, Country]
+        return [Name, Street, PostCode, City, Country, debug_format]
 
     # Process address fields based on address types
     # address_types = ['SELLER', 'BUYER', 'SHIPTO', 'INVOICEE']
@@ -543,6 +588,10 @@ def address_calculation(result_dict, address_types=[]):
             result_dict[file][city_key] = length * [splitted_addr[3]]
             result_dict[file][country_key] = length * [splitted_addr[4]]
             
+            # Debug Regex Format(which format has been selected from this specific address)
+            # debug_format = splitted_addr[5]
+            # print(debug_format)
+
             # Clear the ADDRTOTAL field
             result_dict[file][addr_total_key] = length * [None]
     
