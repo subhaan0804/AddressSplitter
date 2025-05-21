@@ -519,9 +519,12 @@ def address_calculation(result_dict_original, address_types=[]):
             
             # splitting the address
             splitted_addr = split_address(result_dict[file][addr_total_key][0])
-            
-            # Handle special case for postcode in SHIPTO and INVOICEE
-            postcode = splitted_addr[2]
+            name, street, postcode, city, countryid = splitted_addr[0:5]
+
+            # Handle special case, if postcode has any hypen(-)
+            # for eg, "FR-40021"
+            # But normally, it shouldn't be used as there are many countries using hypen(-) 
+            # in their postcode, like Japan, Poland, etc hence commented
             # if addr_type in ['SHIPTO', 'INVOICEE']:
             #     postcode = splitted_addr[2].split('-')[-1]
             
@@ -533,19 +536,23 @@ def address_calculation(result_dict_original, address_types=[]):
             country_key = f"{addr_type}COUNTRYID"
             
             # Assign values to respective fields
-            result_dict[file][name_key] = length * [splitted_addr[0]]
-            result_dict[file][street_key] = length * [splitted_addr[1]]
+            result_dict[file][name_key] = length * [name]
+            result_dict[file][street_key] = length * [street]
             result_dict[file][postcode_key] = length * [postcode]
-            result_dict[file][city_key] = length * [splitted_addr[3]]
-            result_dict[file][country_key] = length * [splitted_addr[4]]
+            result_dict[file][city_key] = length * [city]
+            result_dict[file][country_key] = length * [countryid]
             
             # Debug Regex Format(which format (regular expression) has been selected from this specific address)
             # In case, you to debug, uncomment the below 2 lines
             # debug_format = splitted_addr[5]
             # print(debug_format)
 
-            # Clear the ADDRTOTAL field
-            result_dict[file][addr_total_key] = length * [None]
+            # Clear the ADDRTOTAL field, if all the individuals fields have content
+            # if all the individual fields, dont have content, this means:
+            # there is address issue in the document or some error in address calculation
+            # in that case we would not clear address total field for debugging purpose
+            if name and street and postcode and city and countryid:
+                result_dict[file][addr_total_key] = length * [None]
     
     return result_dict
 
