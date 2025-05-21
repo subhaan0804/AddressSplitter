@@ -1,11 +1,10 @@
-def address_calculation(result_dict, address_types=[]):
+def address_calculation(result_dict_original, address_types=[]):
     import re
     from difflib import SequenceMatcher
     
-    result_dict = result_dict.copy()
+    result_dict = result_dict_original.copy()
 
     country_id_mapping_dict = {
-    # Countries mentioned in the docs of this template
     "Belgium": "BE",
     "Belgien": "BE",
     "Serbia": "RS",
@@ -21,8 +20,6 @@ def address_calculation(result_dict, address_types=[]):
     "India": "IN",
     "Mexico": "MX",
     "Brazil": "BR",
-    
-    # Additional major trading partners
     "France": "FR",
     "Frankreich": "FR",
     "Netherlands": "NL",
@@ -95,29 +92,6 @@ def address_calculation(result_dict, address_types=[]):
         
         return get_best_match(matches, search_term)[1] if matches else None
 
-    def is_valid_uk_postal_code(postcode):
-        postcode = postcode.strip()
-        
-        # Pattern 1: standalone UK postcode (e.g., LS22 7DN)
-        pattern1 = r'^[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2}$'
-        
-        # Pattern 2: full line with optional prefix and city (e.g., GB-WF16 0PS Heckmondwike)
-        pattern2 = r'^([A-Z]{1,3}-)?([A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2})\s+.+$'
-
-        # If it matches pattern1, check for uppercase letters only
-        if re.match(pattern1, postcode):
-            for char in postcode:
-                if char.isalpha() and not char.isupper():
-                    return False
-            return True
-
-        # If it matches pattern2, skip uppercase check
-        if re.match(pattern2, postcode):
-            return True
-
-        # If it matches neither, return False
-        return False
-
     def split_address(address):
         lines = address.strip().split("\n")
         Name = Street = PostCode = City = Country = None
@@ -181,34 +155,7 @@ def address_calculation(result_dict, address_types=[]):
                 debug_format = 6
             else:
                 City = postcode_city_line
-                debug_format = 7
-            
-        # elif is_valid_uk_postal_code(lines[-2]) and (len(lines) >= 6):
-        #     Country = lines[-1].strip()
-            
-        #     # Pattern 1: Standalone postcode (e.g., "LS22 7DN")
-        #     pattern1 = r'^[A-Z]{1,2}[0-9][0-9A-Z]? ?[0-9][A-Z]{2}$'
-            
-        #     if re.match(pattern1, lines[-2]):
-        #         PostCode = lines[-2].strip()
-        #         City = lines[-4].strip()
-        #         Street = lines[-5].strip()
-        #         Name = "\n".join(lines[:-5]).strip()
-            
-        #     else:
-        #         # Pattern 2: Full line (e.g., "GB-WF16 0PS Heckmondwike")
-        #         line = lines[-2].strip()
-        #         match = re.match(r'^([A-Z]{1,3}-)?([A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2})\s+(.+)$', line)
-        #         if match:
-        #             PostCode = match.group(2)
-        #             City = match.group(3).title()
-        #         else:
-        #             PostCode = ''
-        #             City = ''
-        #         Street = lines[-5] + ", " + lines[-4] + ", " + lines[-3]
-        #         Name = "\n".join(lines[:-5]).strip()
-
-
+                debug_format = 7    
            
         # New block: Handle cases where the last line contains postcode and city without country on separate line
         # address dont having country in the last line
@@ -552,13 +499,17 @@ def address_calculation(result_dict, address_types=[]):
         return [Name, Street, PostCode, City, Country, debug_format]
 
     # Process address fields based on address types
-    # address_types = ['SELLER', 'BUYER', 'SHIPTO', 'INVOICEE']
+    supported_address_types = ['SELLER', 'BUYER', 'SHIPTO', 'INVOICEE']
     
     for file in result_dict:
         # Process each address type
         for addr_type in address_types:
             addr_total_key = f"{addr_type}ADDRTOTAL"
             
+            # If addr_type not present in the supported_address_types, then ignore and dont process
+            if addr_type not in supported_address_types:
+                continue
+
             # Skip if the key doesn't exist or value is empty
             if addr_total_key not in result_dict[file] or result_dict[file][addr_total_key][0] in [None, "<NO KEY>", '']:
                 continue
@@ -588,7 +539,8 @@ def address_calculation(result_dict, address_types=[]):
             result_dict[file][city_key] = length * [splitted_addr[3]]
             result_dict[file][country_key] = length * [splitted_addr[4]]
             
-            # Debug Regex Format(which format has been selected from this specific address)
+            # Debug Regex Format(which format (regular expression) has been selected from this specific address)
+            # In case, you to debug, uncomment the below 2 lines
             # debug_format = splitted_addr[5]
             # print(debug_format)
 
