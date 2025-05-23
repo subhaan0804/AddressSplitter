@@ -490,7 +490,6 @@ def address_calculation(result_dict_original, address_types=[]):
             if code: Country = code
         else:
             Country = "DE" # Germany
-            pass
         
         if PostCode:
             if "-" in PostCode:
