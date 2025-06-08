@@ -4,6 +4,8 @@ def address_calculation(result_dict_original, address_types=[]):
     
     result_dict = result_dict_original.copy()
 
+    # TOTAL DEBUG FORMAT is 46 (for now)
+
     country_id_mapping_dict = {
     "Belgium": "BE",
     "Belgien": "BE",
@@ -55,6 +57,7 @@ def address_calculation(result_dict_original, address_types=[]):
     "Griechenland": "GR"
     }
 
+    # todo: want to remove the dash after the prefix (key)
     prefix_country_map = {
     "F-": "FRANCE",
     "A-": "AUSTRIA",
@@ -153,6 +156,14 @@ def address_calculation(result_dict_original, address_types=[]):
                 prefix = match.group(2).split("-")[0] + "-"
                 Country = prefix_country_map.get(prefix.upper(), Country)
                 debug_format = 6
+
+            # 15. DE - 31319 Sehnde
+            elif match := re.match(r'^([A-Z]{1,3})\s*-\s*(\d{1,7}(?:-\d+)?)\s+(.+)$', postcode_city_line):
+                prefix = match.group(1)
+                PostCode = match.group(2)
+                City = match.group(3)
+                Country = prefix_country_map.get(prefix.upper(), Country)  
+                debug_format = 46  
             else:
                 City = postcode_city_line
                 debug_format = 7    
@@ -160,6 +171,8 @@ def address_calculation(result_dict_original, address_types=[]):
         # New block: Handle cases where the last line contains postcode and city without country on separate line
         # address dont having country in the last line
         elif len(lines) >= 2:
+            Street = lines[-2].strip() 
+            Name = "\n".join(lines[:-2]).strip()
             postcode_city_line = lines[-1].strip()
             # Check if last line matches any of the postcode/city patterns
             
@@ -294,6 +307,14 @@ def address_calculation(result_dict_original, address_types=[]):
                 Name = "\n".join(lines[:-2]).strip() 
                 debug_format = 21
 
+            # 15. DE - 31319 Sehnde
+            elif match := re.match(r'^([A-Z]{1,3})\s*-\s*(\d{1,7}(?:-\d+)?)\s+(.+)$', postcode_city_line):
+                prefix = match.group(1)
+                PostCode = match.group(2)
+                City = match.group(3)
+                Country = prefix_country_map.get(prefix.upper(), Country)
+                debug_format = 45
+                
             # address having country in the last line
             elif len(lines) >= 3:
                 Country = lines[-1].strip()
